@@ -3,6 +3,7 @@
 #Recall: VGA pixel offset requires adding 2*x + 1024*y
 #r22 is X location of center of the ball
 #r23 is Y location of center of the ball
+#Key is used as a global reset
 
 #External Devices
 .equ JTAG_UART, 0xFF201000
@@ -12,8 +13,9 @@
 .equ VGA_CHAR_BASE, 0x09000000
 .equ HEX_DISPLAY, 0xFF200020 #every 8 bits is a new HEX display until bit 30 (6-0 H0, 14-8 H1, 22-16 H2, 30-24 H3)
 .equ AUDIO, 0XFF203040
-.equ IRQ_SETUP, 0x00000001
+.equ IRQ_SETUP, 0x00000003 #line1 for pushbuttons, line0 for timer
 .equ TIMER, 0xFF202000
+.equ KEYS, 0xFF200050
 
 #VGA Definitions
 .equ XMAX, 320
@@ -26,22 +28,43 @@
 .equ BLUE, 0x001F
 .equ PURPLE, 0xF81F
 
-#ISR
 .section .exceptions,"ax"
 ISR:
+	#Mask and check for device that triggered the interrupt
 	rdctl et, ipending #check ipending
-	#Jumping if not timer interrupt
+	andi et, et, 0x10
+	bne et, r0, START_KEYS_ISR
 	andi et, et, 0x1
-	beq et, r0, END_ISR
+	bne et, r0, START_TIMER_ISR
+	br END_ISR
 
+START_KEYS_ISR:
+	#Start of Keys Interrupt Handling
+	#Note: clobbering registers doesn't matter here since we are going back to the start
+	#Acknowledge interrupt 
+	movia et, KEYS
+	stwio r0, 12(et)
+	movui ea, ON_RESET
+	#Stop timer to avoid interrupt during reset
+	movia et, TIMER
+	movui r8, 0b1000 #Enable start, no CTS, with interrupt
+	stwio r8, 4(et)
+	eret
+	#End of Keys Interrupt Handling
+
+START_TIMER_ISR:
 	#Start of Timer Interrupt Handling
+	addi sp, sp, -4
+	stw r8,(sp)
 	call REDRAW_ICON
 	#acknowledge interrupt and reset timer
 	movia et, TIMER
 	stwio r0, (et)
 	movui r8, 0b101 #Enable start, no CTS, with interrupt
 	stwio r8, 4(et)
-	br END_ISR
+	ldw r8,(sp)
+	addi sp, sp, 4
+	#br END_ISR (this is implicit)
 	#End of Timer Interrupt Handling
 
 END_ISR:
@@ -55,44 +78,52 @@ _start:
 #BEGIN SETUP
 movia sp, 0x04000000
 
-movui r4, BLACK
-call RESET_VGA
+#Interrupt Setup
+	#Set up push key reset
+	movia r8,KEYS
+	#Set only KEY[0] for interrupt
+  	movia r9,0x1
+  	stwio r9,8(r8)
+  	stwio r0,12(r2) #Clear edge capture reg to avoid unwanted interrupt
 
-#Draw first bar
-movui r4, WHITE
-addi r5, r0, 1
-addi r6, r0, 117
-call DRAW_HALFBAR
-addi r5, r0, 1
-addi r6, r0, 123
-call DRAW_HALFBAR
-
-#Draw second bar
-movui r4, WHITE
-addi r5, r0, 319
-addi r6, r0, 117
-call DRAW_HALFBAR
-addi r5, r0, 319
-addi r6, r0, 123
-call DRAW_HALFBAR
-
-#Draw the ball
-movui r4, GREEN
-addi r5, r0, 160
-addi r6, r0, 120
-call DRAW_ICON
-movui r22, 160
-movui r23, 120
-#END SETUP
-
-#ISR_SETUP
 	#Enable interrups
 	movi r9, IRQ_SETUP
 	wrctl ienable, r9 #ienable = ctl3
 	movi r9, 0b1
 	wrctl status, r9 #Enable PIE
+#END Interrupt Setup
 
-	#Initialize counter value
+ON_RESET:
+	movui r4, BLACK
+	call RESET_VGA
+
+	#Draw first bar
+	movui r4, WHITE
+	addi r5, r0, 1
+	addi r6, r0, 117
+	call DRAW_HALFBAR
+	addi r5, r0, 1
+	addi r6, r0, 123
+	call DRAW_HALFBAR
+
+	#Draw second bar
+	movui r4, WHITE
+	addi r5, r0, 319
+	addi r6, r0, 117
+	call DRAW_HALFBAR
+	addi r5, r0, 319
+	addi r6, r0, 123
+	call DRAW_HALFBAR
+
+	#Draw the ball
+	movui r4, GREEN
+	addi r5, r0, 160
+	addi r6, r0, 120
+	call DRAW_ICON
+	movui r22, 160
+	movui r23, 120
+
+	#Timer Initialization
 	movia r8, TIMER
 	movui r9, %lo(redraw_time)
 	stwio r9, 8(r8)
@@ -102,7 +133,8 @@ movui r23, 120
 	stwio r0, (r8) #reset TIMER
 	movui r9, 0b101 #Enable start, no CTS, enable interrupt
 	stwio r9, 4(r8)
-#END ISR_SETUP
+	#End Timer Initialization
+#END SETUP
 
 END: br END
 
