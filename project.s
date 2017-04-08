@@ -35,12 +35,16 @@ ISR:
 	beq et, r0, END_ISR
 
 	#Start of Timer Interrupt Handling
+	addi sp, sp, -4
+	stw r8,(sp)
 	call REDRAW_ICON
 	#acknowledge interrupt and reset timer
 	movia et, TIMER
 	stwio r0, (et)
 	movui r8, 0b101 #Enable start, no CTS, with interrupt
 	stwio r8, 4(et)
+	ldw r8,(sp)
+	addi sp, sp, 4
 	br END_ISR
 	#End of Timer Interrupt Handling
 
@@ -223,8 +227,11 @@ DRAW_ICON:
 #Function to re-draw 3x3 icon at a location
 REDRAW_ICON:
 	#Prologue
-	addi sp, sp, -4
+	addi sp, sp, -16
 	stw ra,(sp)
+	stw r4,4(sp)
+	stw r5,8(sp)
+	stw r6,12(sp)
 
 	#Initialization
 	movia r8, VGA_PIXEL_BASE
@@ -247,7 +254,10 @@ REDRAW_ICON:
 	
 	#Epliogue
 	ldw ra,(sp)
-	addi sp, sp, 4
+	ldw r4,4(sp)
+	ldw r5,8(sp)
+	ldw r6,12(sp)
+	addi sp, sp, 16
 	ret
 
 #Function to write a value in r4 to the 7-seg display HEX0
