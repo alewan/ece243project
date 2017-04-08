@@ -265,11 +265,10 @@ DRAW_HEX0_DIGIT:
 	#Prologue (N/A)
 	
 	#Initialization
-	movia r8, 0xFF200020
+	movia r8, HEX_DISPLAY
 	
 	#Core
 	
 	
 	#Epilogue
 	ret
-	
