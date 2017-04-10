@@ -17,7 +17,7 @@
 .equ HEX_DISPLAY, 0xFF200020 #every 8 bits is a new HEX display until bit 30 (6-0 H0, 14-8 H1, 22-16 H2, 30-24 H3)
 .equ AUDIO, 0XFF203040
 .equ IRQ_SETUP, 0x00000001
-.equ TIMER, 0xFF202000
+.equ TIMER1, 0xFF202000
 
 #VGA Definitions
 .equ XMAX, 320
@@ -51,7 +51,7 @@ ISR:
 	call REDRAW_ICON
 	call REDRAW_BAR
 	#acknowledge interrupt and reset timer
-	movia et, TIMER
+	movia et, TIMER1
 	stwio r0, (et)
 	movui r8, 0b101 #Enable start, no CTS, with interrupt
 	stwio r8, 4(et)
@@ -108,13 +108,13 @@ addi r21,r0,1
 	wrctl status, r9 #Enable PIE
 
 	#Initialize counter value
-	movia r8, TIMER
+	movia r8, TIMER1
 	movui r9, %lo(redraw_time)
 	stwio r9, 8(r8)
 	movui r9, %hi(redraw_time)
 	stwio r9, 12(r8)
 
-	stwio r0, (r8) #reset TIMER
+	stwio r0, (r8) #reset TIMER1
 	movui r9, 0b101 #Enable start, no CTS, enable interrupt
 	stwio r9, 4(r8)
 #END ISR_SETUP
@@ -158,13 +158,37 @@ RESET_VGA:
 	addi sp, sp, 8
 	ret
 
-#Draw a 3x7 bar with color specified in r4, leftmost x location in r5, top y location in r6
+#Draw over the column with color specified in r4, leftmost x location in r5
+CLEAR_BAR_COLUMN:
+	#Prologue
+	addi sp, sp, -4
+	stw ra,0(sp)
+	
+	#Initialization
+	#Adjust arguments to center
+	muli r5, r5, 2
+	add r6,r5,r0
+	movia r5,VGA_PIXEL_BASE
+	add r5,r5,r6
+	
+	#Core
+	movui r6, 240
+CLEAR_BAR_DRAWING_LOOP:
+	call DRAW_BAR_SECTION
+	addi r5,r5,1024
+	addi r6,r6,-1
+	bgt r6,r0,CLEAR_BAR_DRAWING_LOOP
+
+	#Epliogue
+	ldw ra,(sp)
+	addi sp, sp, 4
+	ret
+
+#Draw an arbitrarily sized bar with color specified in r4, leftmost x location in r5, top y location in r6
 DRAW_BAR:
 	#Prologue
-	addi sp, sp, -12
+	addi sp, sp, -4
 	stw ra,0(sp)
-	stw r5,4(sp)
-	stw r6,8(sp)
 	
 	#Initialization
 	#Adjust arguments to center
@@ -184,9 +208,7 @@ BAR_DRAWING_LOOP:
 
 	#Epliogue
 	ldw ra,(sp)
-	ldw r5,4(sp)
-	ldw r6,8(sp)
-	addi sp, sp, 12
+	addi sp, sp, 4
 	ret
 
 #Function to draw a 3x1 line at a location specified by color=r4,location=r5
@@ -216,11 +238,9 @@ REDRAW_BAR:
 	#Redraw over old location
 	movui r4, BLACK
 	movui r5, BAR1_START_X
-	mov r6, r16
-	call DRAW_BAR
+	call CLEAR_BAR_COLUMN
 	movui r5, BAR2_START_X
-	mov r6, r17
-	call DRAW_BAR
+	call CLEAR_BAR_COLUMN
 
 	#Draw in new location
 	movui r4, BLUE
