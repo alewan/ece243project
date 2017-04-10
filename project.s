@@ -8,6 +8,7 @@
 .equ JTAG_UART, 0xFF201000
 .equ old_time, 0xF08002FA #500M in Hex
 .equ redraw_time, 0x05000000
+.equ stuffedcow_time, x01000000
 .equ VGA_PIXEL_BASE, 0x08000000
 .equ VGA_CHAR_BASE, 0x09000000
 .equ HEX_DISPLAY, 0xFF200020 #every 8 bits is a new HEX display until bit 30 (6-0 H0, 14-8 H1, 22-16 H2, 30-24 H3)
@@ -18,8 +19,8 @@
 #VGA Definitions
 .equ XMAX, 320
 .equ YMAX, 240
-.equ BALL_START_X 160
-.equ BALL_START_Y 120
+.equ BALL_START_X, 160
+.equ BALL_START_Y, 120
 .equ WHITE, 0xFFFF
 .equ GREY, 0x8410
 .equ BLACK, 0x0000
@@ -264,18 +265,21 @@ Y_DIR_CHECK:
 	bgt r21, r0, MOVING_DOWN
 MOVING_UP:
 	addi r23,r23, -1
+	br BORDER_CHECK
 MOVING_DOWN:
 	addi r23, r23, 1
-
+BORDER_CHECK:
+	movui r4,XMAX
 	#Check X border, Y border
-	bge r22,XMAX,CHANGE_X_DIR
-	ble r22,0,CHANGE_X_DIR
-	br CHANGE_Y_DIR
+	bge r22,r4,CHANGE_X_DIR
+	ble r22,r0,CHANGE_X_DIR
+	br CHECK_Y_DIR
 CHANGE_X_DIR:
 	xori r20,r20,1
-CHANGE_Y_DIR:
-	bge r22,YMAX,CHANGE_Y_DIR
-	ble r22,0,CHANGE_Y_DIR
+CHECK_Y_DIR:
+	movui r4,YMAX
+	bge r23,r4,CHANGE_Y_DIR
+	ble r23,r0,CHANGE_Y_DIR
 	br END_CHANGE_DIR
 CHANGE_Y_DIR:
 	xori r21,r21,1
