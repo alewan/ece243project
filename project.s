@@ -86,7 +86,7 @@ movui r4, WHITE
 addi r5, r0, BAR2_START_X
 addi r6, r0, BAR2_START_Y
 call DRAW_BAR
-addi r18,r0,BAR2_START_Y
+addi r19,r0,BAR2_START_Y
 
 #Draw the ball
 movui r4, GREEN
@@ -130,31 +130,31 @@ br gameLoop
 RESET_VGA:
 	#Prologue
 	addi sp, sp, -8
-	stw r16,0(sp)
-	stw r17,4(sp)
+	stw r10,0(sp)
+	stw r11,4(sp)
 
 	#Initialization
 	movia r8, VGA_PIXEL_BASE
-	mov r17, r0 #ycount
+	mov r11, r0 #ycount
 	
 	#Core
 	VGAR_Y_LOOP:
-		mov r16, r0 #xcount
+		mov r10, r0 #xcount
 		movui r9, XMAX
 		VGAR_X_LOOP:
 			sthio r4,(r8)
 			addi r8,r8,2
-			addi r16, r16, 1
-			blt r16, r9, VGAR_X_LOOP
+			addi r10, r10, 1
+			blt r10, r9, VGAR_X_LOOP
 		subi r8, r8, 640 #2*XMAX
 		addi r8, r8, 1024
-		addi r17, r17, 1
+		addi r11, r11, 1
 		movui r9, YMAX
-		blt r17, r9, VGAR_Y_LOOP
+		blt r11, r9, VGAR_Y_LOOP
 	
 	#Epilogue
-	ldw r16,0(sp)
-	ldw r17,4(sp)
+	ldw r10,0(sp)
+	ldw r11,4(sp)
 	addi sp, sp, 8
 	ret
 
