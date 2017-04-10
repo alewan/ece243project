@@ -3,6 +3,8 @@
 #Recall: VGA pixel offset requires adding 2*x + 1024*y
 #r22 is X location of center of the ball, r20 is X directionality
 #r23 is Y location of center of the ball, r21 is Y directionality
+#r18 is the top of the left bar
+#r19 is the top of the right bar
 
 #External Devices
 .equ JTAG_UART, 0xFF201000
@@ -73,6 +75,7 @@ call DRAW_HALFBAR
 addi r5, r0, 1
 addi r6, r0, 123
 call DRAW_HALFBAR
+addi r18,r0,114
 
 #Draw second bar
 movui r4, WHITE
@@ -82,6 +85,7 @@ call DRAW_HALFBAR
 addi r5, r0, 319
 addi r6, r0, 123
 call DRAW_HALFBAR
+addi r19,r0,114
 
 #Draw the ball
 movui r4, GREEN
@@ -153,7 +157,7 @@ RESET_VGA:
 	addi sp, sp, 8
 	ret
 
-#Function to draw 3x6 bar at a location specified by x=r5, y=r6, color=r4
+#Function to draw 3x7 bar at a location specified by x=r5, y=r6, color=r4
 DRAW_HALFBAR:
 	#Prologue (N/A)
 	
@@ -166,7 +170,7 @@ DRAW_HALFBAR:
 	muli r6, r6,1024
 	add r8, r8, r5
 	add r8, r8, r6
-	addi r8, r8, -1026 #Start at top LH corner (center-1026)
+	addi r8, r8, -3074 #Start at top LH corner (center-1026)
 	
 	#Top three bits
 	sthio r4, (r8)
@@ -193,10 +197,15 @@ DRAW_HALFBAR:
 	sthio r4, 4098(r8)
 	sthio r4, 4100(r8)
 
-	#Last three bits
+	#Almost last three bits
 	sthio r4, 5120(r8)
 	sthio r4, 5122(r8)
 	sthio r4, 5124(r8)
+
+	#Last three bits
+	sthio r4, 6144(r8)
+	sthio r4, 6146(r8)
+	sthio r4, 6148(r8)
 	
 	#Epliogue (N/A)
 	ret
