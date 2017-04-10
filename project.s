@@ -1,8 +1,8 @@
 #Conventions
 #Functions will use caller saved registers r8, r9 first then callee saved registers
 #Recall: VGA pixel offset requires adding 2*x + 1024*y
-#r22 is X location of center of the ball
-#r23 is Y location of center of the ball
+#r22 is X location of center of the ball, r20 is X directionality
+#r23 is Y location of center of the ball, r21 is Y directionality
 
 #External Devices
 .equ JTAG_UART, 0xFF201000
@@ -18,6 +18,8 @@
 #VGA Definitions
 .equ XMAX, 320
 .equ YMAX, 240
+.equ BALL_START_X 160
+.equ BALL_START_Y 120
 .equ WHITE, 0xFFFF
 .equ GREY, 0x8410
 .equ BLACK, 0x0000
@@ -82,11 +84,14 @@ call DRAW_HALFBAR
 
 #Draw the ball
 movui r4, GREEN
-addi r5, r0, 160
-addi r6, r0, 120
+addi r5, r0, BALL_START_X
+addi r6, r0, BALL_START_Y
 call DRAW_ICON
-movui r22, 160
-movui r23, 120
+movui r22, BALL_START_X
+movui r23, BALL_START_Y
+addi r20,r0,1
+addi r21,r0,1
+
 #END SETUP
 
 #ISR_SETUP
@@ -108,7 +113,12 @@ movui r23, 120
 	stwio r9, 4(r8)
 #END ISR_SETUP
 
-END: br END
+gameLoop:
+
+
+br gameLoop
+
+#END: br END not necessary since the game loops in game loop
 
 #Function to reset VGA to colour specified in r4
 RESET_VGA:
@@ -243,9 +253,34 @@ REDRAW_ICON:
 	call DRAW_ICON
 
 	#Correct r22, r23 with border detection
+	#Check X direction
+	bgt r20,r0,MOVING_RIGHT
+MOVING_LEFT:
+	addi r22, r22, -1 
+	br Y_DIR_CHECK
+MOVING_RIGHT: 
 	addi r22, r22, 1
+Y_DIR_CHECK:
+	bgt r21, r0, MOVING_DOWN
+MOVING_UP:
+	addi r23,r23, -1
+MOVING_DOWN:
 	addi r23, r23, 1
-	
+
+	#Check X border, Y border
+	bge r22,XMAX,CHANGE_X_DIR
+	ble r22,0,CHANGE_X_DIR
+	br CHANGE_Y_DIR
+CHANGE_X_DIR:
+	xori r20,r20,1
+CHANGE_Y_DIR:
+	bge r22,YMAX,CHANGE_Y_DIR
+	ble r22,0,CHANGE_Y_DIR
+	br END_CHANGE_DIR
+CHANGE_Y_DIR:
+	xori r21,r21,1
+
+END_CHANGE_DIR:
 	#Core
 	movui r4, GREEN
 	mov r5, r22
