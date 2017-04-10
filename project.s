@@ -1,10 +1,11 @@
 #Conventions
 #Functions will use caller saved registers r8, r9 first then callee saved registers
 #Recall: VGA pixel offset requires adding 2*x + 1024*y
+#"Global Variables"
 #r22 is X location of center of the ball, r20 is X directionality
 #r23 is Y location of center of the ball, r21 is Y directionality
-#r18 is the top of the left bar
-#r19 is the top of the right bar
+#r16 is previous top of the left bar, r18 is the new top of the left bar
+#r17 is previous top of the right bar, r19 is the new top of the right bar
 
 #External Devices
 .equ JTAG_UART, 0xFF201000
@@ -23,6 +24,11 @@
 .equ YMAX, 240
 .equ BALL_START_X, 160
 .equ BALL_START_Y, 120
+.equ BAR1_START_X, 0
+.equ BAR2_START_X, 318
+.equ BAR1_START_Y, 114
+.equ BAR2_START_Y, 114
+.equ BAR_SIZE, 15
 .equ WHITE, 0xFFFF
 .equ GREY, 0x8410
 .equ BLACK, 0x0000
@@ -43,6 +49,7 @@ ISR:
 	addi sp, sp, -4
 	stw r8,(sp)
 	call REDRAW_ICON
+	call REDRAW_BAR
 	#acknowledge interrupt and reset timer
 	movia et, TIMER
 	stwio r0, (et)
@@ -69,23 +76,17 @@ call RESET_VGA
 
 #Draw first bar
 movui r4, WHITE
-addi r5, r0, 1
-addi r6, r0, 117
-call DRAW_HALFBAR
-addi r5, r0, 1
-addi r6, r0, 123
-call DRAW_HALFBAR
-addi r18,r0,114
+addi r5, r0, BAR1_START_X
+addi r6, r0, BAR1_START_Y
+call DRAW_BAR
+addi r18,r0,BAR1_START_Y
 
 #Draw second bar
 movui r4, WHITE
-addi r5, r0, 319
-addi r6, r0, 117
-call DRAW_HALFBAR
-addi r5, r0, 319
-addi r6, r0, 123
-call DRAW_HALFBAR
-addi r19,r0,114
+addi r5, r0, BAR2_START_X
+addi r6, r0, BAR2_START_Y
+call DRAW_BAR
+addi r18,r0,BAR2_START_Y
 
 #Draw the ball
 movui r4, GREEN
@@ -157,59 +158,93 @@ RESET_VGA:
 	addi sp, sp, 8
 	ret
 
-#Function to draw 3x7 bar at a location specified by x=r5, y=r6, color=r4
-DRAW_HALFBAR:
-	#Prologue (N/A)
+#Draw a 3x7 bar with color specified in r4, leftmost x location in r5, top y location in r6
+DRAW_BAR:
+	#Prologue
+	addi sp, sp, -12
+	stw ra,0(sp)
+	stw r5,4(sp)
+	stw r6,8(sp)
 	
 	#Initialization
-	movia r8, VGA_PIXEL_BASE
+	#Adjust arguments to center
+	muli r5, r5, 2
+	muli r6, r6, 1024
+	add r6,r5,r6
+	movia r5,VGA_PIXEL_BASE
+	add r5,r5,r6
 	
 	#Core
-	#Adjust r8 to center
-	muli r5, r5, 2
-	muli r6, r6,1024
-	add r8, r8, r5
-	add r8, r8, r6
-	addi r8, r8, -3074 #Start at top LH corner (center-1026)
-	
-	#Top three bits
-	sthio r4, (r8)
-	sthio r4, 2(r8)
-	sthio r4, 4(r8)
-	
-	#Middle three bits
-	sthio r4, 1024(r8)
-	sthio r4, 1026(r8)
-	sthio r4, 1028(r8)	
-	
-	#Another three bits
-	sthio r4, 2048(r8)
-	sthio r4, 2050(r8)
-	sthio r4, 2052(r8)
+	movui r6, BAR_SIZE
+BAR_DRAWING_LOOP:
+	call DRAW_BAR_SECTION
+	addi r5,r5,1024
+	addi r6,r6,-1
+	bgt r6,r0,BAR_DRAWING_LOOP
 
-	#Yet another three bits
-	sthio r4, 3072(r8)
-	sthio r4, 3074(r8)
-	sthio r4, 3076(r8)
-
-	#Yet another three bits
-	sthio r4, 4096(r8)
-	sthio r4, 4098(r8)
-	sthio r4, 4100(r8)
-
-	#Almost last three bits
-	sthio r4, 5120(r8)
-	sthio r4, 5122(r8)
-	sthio r4, 5124(r8)
-
-	#Last three bits
-	sthio r4, 6144(r8)
-	sthio r4, 6146(r8)
-	sthio r4, 6148(r8)
-	
-	#Epliogue (N/A)
+	#Epliogue
+	ldw ra,(sp)
+	ldw r5,4(sp)
+	ldw r6,8(sp)
+	addi sp, sp, 12
 	ret
+
+#Function to draw a 3x1 line at a location specified by color=r4,location=r5
+DRAW_BAR_SECTION:
+	#Prologue (N/A)
 	
+	#Draw 3 bits
+	sthio r4, (r5)
+	sthio r4, 2(r5)
+	sthio r4, 4(r5)
+	
+	#Epilogue (N/A)
+	ret
+
+#Function to redraw the bar
+REDRAW_BAR:
+	#Prologue
+	addi sp, sp, -16
+	stw ra,(sp)
+	stw r4,4(sp)
+	stw r5,8(sp)
+	stw r6,12(sp)
+
+	#Initialization
+	movia r8, VGA_PIXEL_BASE
+
+	#Redraw over old location
+	movui r4, BLACK
+	movui r5, BAR1_START_X
+	mov r6, r16
+	call DRAW_BAR
+	movui r5, BAR2_START_X
+	mov r6, r17
+	call DRAW_BAR
+
+	#Draw in new location
+	movui r4, BLUE
+	movui r5, BAR1_START_X
+	mov r6, r18
+	call DRAW_BAR
+	movui r4, BLUE
+	movui r5, BAR2_START_X
+	mov r6, r19
+	call DRAW_BAR
+
+	#Update old and new
+	add r16,r0,r18
+	add r17,r0,r19
+
+	#Epliogue
+	ldw ra,(sp)
+	ldw r4,4(sp)
+	ldw r5,8(sp)
+	ldw r6,12(sp)
+	addi sp, sp, 16
+	ret
+
+
 #Function to draw 3x3 icon at a location specified by x=r5, y=r6, color=r4
 DRAW_ICON:
 	#Prologue (N/A)
