@@ -10,8 +10,8 @@
 #External Devices
 .equ JTAG_UART, 0xFF201000
 .equ old_time, 0xF08002FA #500M in Hex
-.equ redraw_time, 0x05000000
-.equ stuffedcow_time, x01000000
+.equ redraw_time, 0x00200000
+.equ stuffedcow_time, x00100000
 .equ VGA_PIXEL_BASE, 0x08000000
 .equ VGA_CHAR_BASE, 0x09000000
 .equ HEX_DISPLAY, 0xFF200020 #every 8 bits is a new HEX display until bit 30 (6-0 H0, 14-8 H1, 22-16 H2, 30-24 H3)
@@ -24,11 +24,11 @@
 .equ YMAX, 240
 .equ BALL_START_X, 160
 .equ BALL_START_Y, 120
-.equ BAR1_START_X, 0
-.equ BAR2_START_X, 318
+.equ BAR1_START_X, 20
+.equ BAR2_START_X, 313
 .equ BAR1_START_Y, 114
 .equ BAR2_START_Y, 114
-.equ BAR_SIZE, 15
+.equ BAR_SIZE, 50
 .equ WHITE, 0xFFFF
 .equ GREY, 0x8410
 .equ BLACK, 0x0000
@@ -36,6 +36,15 @@
 .equ GREEN, 0x07E0
 .equ BLUE, 0x001F
 .equ PURPLE, 0xF81F
+
+
+#TO SAVE IN THE ISR
+#r8
+#r9
+#r10
+#r11
+#r12
+#r13
 
 #ISR
 .section .exceptions,"ax"
@@ -46,8 +55,13 @@ ISR:
 	beq et, r0, END_ISR
 
 	#Start of Timer Interrupt Handling
-	addi sp, sp, -4
+	addi sp, sp, -24
 	stw r8,(sp)
+	stw r9,4(sp)
+	stw r10,8(sp)
+	stw r11,12(sp)
+	stw r12,16(sp)
+	stw r13,20(sp)
 	call REDRAW_ICON
 	call REDRAW_BAR
 	#acknowledge interrupt and reset timer
@@ -56,7 +70,12 @@ ISR:
 	movui r8, 0b101 #Enable start, no CTS, with interrupt
 	stwio r8, 4(et)
 	ldw r8,(sp)
-	addi sp, sp, 4
+	ldw r9,4(sp)
+	ldw r10,8(sp)
+	ldw r11,12(sp)
+	ldw r12,16(sp)
+	ldw r13,20(sp)
+	addi sp, sp, 24
 	br END_ISR
 	#End of Timer Interrupt Handling
 
@@ -100,6 +119,8 @@ addi r21,r0,1
 
 #END SETUP
 
+
+
 #ISR_SETUP
 	#Enable interrups
 	movi r9, IRQ_SETUP
@@ -118,11 +139,71 @@ addi r21,r0,1
 	movui r9, 0b101 #Enable start, no CTS, enable interrupt
 	stwio r9, 4(r8)
 #END ISR_SETUP
+#initialize displacement of left bar
+movi r16, 0
+movi r18, 0
+
+#number of samples needed
+movi r8, 384
+
+#local max within the loop
+movi r9, 0
+
+#the loop counter
+movi r10, 0
+
+
+#TO SAVE IN THE ISR
+#r8
+#r9
+#r10
+#r11
+#r12
+#r13
 
 gameLoop:
+#check if the fifo has anything in it
+movia r11, AUDIO
+ldwio r12, 4(r11)
+andi r12, r12, 0xFF
+beq r12, r0, gameLoop
+
+#echo audio to the speakers (stored in r12)
+ldwio r12, 8(r11)
+stwio r12, 8(r11)
+ldwio r12, 12(r11)
+stwio r12, 12(r11)
+
+#update the local max amplitude
+bgt r12, r9, updateLocalAmp
+returnFromLocalAmp:
+
+#incriment the loop counter
+addi r10, r10, 1
+
+#if enough loops, then update the global max amplitude
+bge r10, r8, updateMaxAmp
+returnFromMaxAmp:
 
 
 br gameLoop
+
+#update the max amplitude within the loop
+updateLocalAmp:
+mov r9, r12
+br returnFromLocalAmp 
+
+updateMaxAmp:
+movi r10, 0
+mov r16, r18
+#temp register for shifting
+mov r13, r9
+srli r13, r13, 23
+movi r9, 0
+
+#maybe later here make it stay below 240
+mov r18, r13
+br returnFromMaxAmp
 
 #END: br END not necessary since the game loops in game loop
 
@@ -316,7 +397,7 @@ REDRAW_ICON:
 	mov r5, r22
 	mov r6, r23
 	call DRAW_ICON
-
+	
 	#Correct r22, r23 with border detection
 	#Check X direction
 	bgt r20,r0,MOVING_RIGHT
@@ -333,6 +414,30 @@ MOVING_UP:
 MOVING_DOWN:
 	addi r23, r23, 1
 BORDER_CHECK:
+	#Check for the left bar
+	movui r4, BAR1_START_X
+	addi r4,r4,4
+	bgt r22,r4,DONE_CHECK_HIT_B1
+	blt r23,r18, DONE_CHECK_HIT_B1
+	addi r4,r18,BAR_SIZE
+	bgt r23,r4,DONE_CHECK_HIT_B1
+	#Getting here implies a hit on the bar
+	xori r20,r20,1
+	br CHECK_Y_DIR
+DONE_CHECK_HIT_B1:
+	#Check for the right bar
+	movui r4, BAR2_START_X
+	subi r4,r4,1
+	blt r22,r4,DONE_CHECK_HIT_B2
+	blt r23,r19, DONE_CHECK_HIT_B2
+	addi r4,r19,BAR_SIZE
+	bgt r23,r4,DONE_CHECK_HIT_B2
+	#Getting here implies a hit on the bar
+	xori r20,r20,1
+	br CHECK_Y_DIR
+DONE_CHECK_HIT_B2:
+
+	#Check for the wall
 	movui r4,XMAX
 	#Check X border, Y border
 	bge r22,r4,CHANGE_X_DIR
