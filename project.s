@@ -18,6 +18,8 @@
 .equ AUDIO, 0XFF203040
 .equ IRQ_SETUP, 0x00000001
 .equ TIMER1, 0xFF202000
+.equ ADDR_JP2PORT, 0xFF200070
+.equ ADDR_JP2PORT_DIR, 0xFF200074
 
 #VGA Definitions
 .equ XMAX, 320
@@ -25,7 +27,7 @@
 .equ BALL_START_X, 160
 .equ BALL_START_Y, 120
 .equ BAR1_START_X, 20
-.equ BAR2_START_X, 313
+.equ BAR2_START_X, 290
 .equ BAR1_START_Y, 114
 .equ BAR2_START_Y, 114
 .equ BAR_SIZE, 50
@@ -55,13 +57,23 @@ ISR:
 	beq et, r0, END_ISR
 
 	#Start of Timer Interrupt Handling
-	addi sp, sp, -24
+	addi sp, sp, -28
 	stw r8,(sp)
 	stw r9,4(sp)
 	stw r10,8(sp)
 	stw r11,12(sp)
 	stw r12,16(sp)
 	stw r13,20(sp)
+	stw r14,20(sp)
+	#check the fsr
+	movia r11, ADDR_JP2PORT_DIR
+	stwio r0, 0(r11)
+	movia r11, ADDR_JP2PORT
+	ldwio r14, 0(r11)
+	movia r12, 0xffffffff
+	bne r14, r12, addr19
+	br subr19
+	retFromFSR:
 	call REDRAW_ICON
 	call REDRAW_BAR
 	#acknowledge interrupt and reset timer
@@ -75,7 +87,8 @@ ISR:
 	ldw r11,12(sp)
 	ldw r12,16(sp)
 	ldw r13,20(sp)
-	addi sp, sp, 24
+	ldw r14,24(sp)
+	addi sp, sp, 28
 	br END_ISR
 	#End of Timer Interrupt Handling
 
@@ -160,13 +173,16 @@ movi r10, 0
 #r11
 #r12
 #r13
+#r14
 
 gameLoop:
+
+checkAudio:
 #check if the fifo has anything in it
 movia r11, AUDIO
 ldwio r12, 4(r11)
 andi r12, r12, 0xFF
-beq r12, r0, gameLoop
+beq r12, r0, checkAudio
 
 #echo audio to the speakers (stored in r12)
 ldwio r12, 8(r11)
@@ -187,6 +203,19 @@ returnFromMaxAmp:
 
 
 br gameLoop
+
+#add to r19
+addr19:
+movi r12, 190
+bgt r19, r12, retFromFSR
+addi r19, r19, 5
+br retFromFSR
+
+#sub from r19
+subr19:
+blt r19, r0, retFromFSR
+subi r19, r19, 5
+br retFromFSR
 
 #update the max amplitude within the loop
 updateLocalAmp:
@@ -402,17 +431,17 @@ REDRAW_ICON:
 	#Check X direction
 	bgt r20,r0,MOVING_RIGHT
 MOVING_LEFT:
-	addi r22, r22, -1 
+	addi r22, r22, -2 
 	br Y_DIR_CHECK
 MOVING_RIGHT: 
-	addi r22, r22, 1
+	addi r22, r22, 2
 Y_DIR_CHECK:
 	bgt r21, r0, MOVING_DOWN
 MOVING_UP:
-	addi r23,r23, -1
+	addi r23,r23, -2
 	br BORDER_CHECK
 MOVING_DOWN:
-	addi r23, r23, 1
+	addi r23, r23, 2
 BORDER_CHECK:
 	#Check for the left bar
 	movui r4, BAR1_START_X
