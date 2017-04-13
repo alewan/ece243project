@@ -28,8 +28,8 @@
 .equ YMAX, 240
 .equ BALL_START_X, 160
 .equ BALL_START_Y, 120
-.equ BAR1_START_X, 20
-.equ BAR2_START_X, 290
+.equ BAR1_START_X, 1
+.equ BAR2_START_X, 316
 .equ BAR1_START_Y, 114
 .equ BAR2_START_Y, 114
 .equ BAR_SIZE, 25
@@ -48,11 +48,14 @@
 .equ HEX_DISPLAY_VAL3, 0x4F
 .equ HEX_DISPLAY_VAL4, 0x66
 .equ HEX_DISPLAY_VAL5, 0x6D
-.equ HEX_DISPLAY_VAL6, 0x6D
-.equ HEX_DISPLAY_VAL7, 0x7D
-.equ HEX_DISPLAY_VAL8, 0x07
-.equ HEX_DISPLAY_VAL9, 0x7F
-.equ HEX_DISPLAY_VALA, 0x6F
+.equ HEX_DISPLAY_VAL6, 0x7D
+.equ HEX_DISPLAY_VAL7, 0x07
+.equ HEX_DISPLAY_VAL8, 0x7F
+.equ HEX_DISPLAY_VAL9, 0x6F
+.equ HEX_DISPLAY_VALA, 0b1110111
+
+#bytes
+beginning_message: .byte 0x50, 0x72, 0x65, 0x73, 0x73, 0x20, 0x4b, 0x45, 0x59, 0x30, 0x0d, 0x0a
 
 
 #TO SAVE IN THE ISR
@@ -190,6 +193,9 @@ call UPDATE_SCORE
 	stwio r9,8(r8)
 	stwio r0,12(r8)
 	#MESSGAE TO VGA BEFORE START OF GAME
+	movia r8, VGA_CHAR_BASE
+	movi r9, beginning_message
+	stbio r9, 132(r8)
 	WAIT_FOR_KEYPRESS: br WAIT_FOR_KEYPRESS
 
 
@@ -604,7 +610,6 @@ DRAWA_P1:
 
 UPDATE_P2:
 	stwio r9,(r8) #Sending P1 score to hex display
-	addi r8,r8,8
 #Check value in r17
 	beq r17, r0, DRAW0_P2
 	addi r9,r0,1
@@ -627,7 +632,7 @@ UPDATE_P2:
 	beq r17, r9, DRAW9_P2
 	addi r9,r9,1
 	beq r17, r9, DRAWA_P2
-
+	
 DRAW0_P2:
 	movui r9, HEX_DISPLAY_VAL0
 	br END_UPDATE_SCORE
@@ -660,12 +665,20 @@ DRAW9_P2:
 	br END_UPDATE_SCORE
 DRAWA_P2:
 	movui r9, HEX_DISPLAY_VALA
+	slli r9,r9,8
+	ldwio r8,(r8)
+	or r9,r8,r9
+	movia r8,HEX_DISPLAY
 	stwio r9,(r8)
 	#GAMEOVER
 	movia ea, _start
 	eret
 
 END_UPDATE_SCORE:
+	slli r9,r9,8
+	ldwio r8,(r8)
+	or r9,r8,r9
+	movia r8,HEX_DISPLAY
 	stwio r9,(r8) #Sending P2 score to hex display
 	#Epilogue (N/A)
 	ret
