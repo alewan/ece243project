@@ -1,0 +1,116 @@
+Git commit history:
+commit b8e6d39bb35f97385bd7b56ed061757a72eeef58
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Thu Apr 13 12:21:37 2017 -0400
+
+    Made some fixes to hex display output, then paircoded with Alex to add beginning message.
+
+commit 44176a3514e2d1b36fec5f075df9c28c3c2769eb
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Thu Apr 13 01:23:01 2017 -0400
+
+    Added scorekeeping (output to 7seg HEX display),  and master game start (KEY0)
+
+commit 3e31f044154b51bc3990a2ab94581da0149b94db
+Author: MertTens <amertens114@gmail.com>
+Date:   Wed Apr 12 17:20:16 2017 -0400
+
+    FSR implementation
+    
+    The game works with the FSR now
+
+commit 20a4c8d47741fcd0f52f13e5c7d66b986b9f6deb
+Author: MertTens <amertens114@gmail.com>
+Date:   Tue Apr 11 16:15:56 2017 -0400
+
+    GPOI TEST
+    
+    the code to read whether or not the FSR has been pressed
+
+commit 1b3ffa621ab617edaee6db1c7482d9dc4525baac
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Mon Apr 10 14:21:08 2017 -0400
+
+    Changed VGA bar redraw method
+
+commit dfc736cce5d73b7faa1198dc5638497a6ee92f61
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Mon Apr 10 13:38:23 2017 -0400
+
+    Fixed a minor issue with right bar redraw
+
+commit e44c5b4270f50af15eeab74f4df5960749dcfee4
+Author: MertTens <amertens114@gmail.com>
+Date:   Sun Apr 9 21:25:38 2017 -0400
+
+    FSR
+    
+    added the arduino code for the FSR that will control the movement of
+    one of the paddles
+
+commit a812d238bb600685e2267b170799ad450e177e54
+Author: MertTens <amertens114@gmail.com>
+Date:   Sun Apr 9 21:21:05 2017 -0400
+
+    Amplitude detection
+    
+    Added the code that is able to detect the maximum amplitude of some
+    wave over time
+
+commit d35234bcc4325a6110e2f8a080619e04601d9981
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Sun Apr 9 21:47:04 2017 -0400
+
+    Overhauled bar drawing methodology, redrawing
+
+commit 2303f51d0059fce42c01e63e9278c4fd2e5e54f5
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Sun Apr 9 21:02:19 2017 -0400
+
+    Adjusted bar drawing and tracking
+
+commit 90e231b89fb687dd811677f049a271aeb3c228e7
+Author: alewan <alewan@users.noreply.github.com>
+Date:   Sun Apr 9 20:31:19 2017 -0400
+
+    Fixed minor issues with screen border detection
+
+commit 6abe9844c60d92b6af9e4470df1eb16014cd1208
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Sun Apr 9 20:15:44 2017 -0400
+
+    Added VGA border detection
+
+commit 74413996790a1c236073726c7aecd0450869a572
+Merge: 6e32f3d 9b15813
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Sat Apr 8 11:26:12 2017 -0400
+
+    Resolved a merge conflict
+
+commit 6e32f3d0c51b1ee77328d2a6c078bae01c9ab4ea
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Sat Apr 8 11:22:31 2017 -0400
+
+    Minor changes and reverted key reset because it caused practical issues
+
+commit 9b15813c603286ecc4dd03bf571cfa188fdcdd2b
+Author: A Wan <alewan@users.noreply.github.com>
+Date:   Thu Apr 6 13:32:24 2017 -0400
+
+    Added a master reset   (interrupt from KEY[0])
+
+commit 49c8ae0e396876f7c08ace00b7c52e78019d6cb8
+Author: A Wan <aleksei.wan@gmail.com>
+Date:   Thu Apr 6 11:46:03 2017 -0400
+
+    Initial commit
+
+
+Before the project was in Git:
+April 5, 2017
+Aleksei: Wrote modular code to draw additional game elements on the VGA and keep track of them. The functions were also written in a way to support code reuse for I/O integration. Also added code for timer interrupt driven motion/re-draw.
+Alex: Wrote basic code for testing audio. Elaborated on this code by adding amplitude detection. A document containing the used registers and their exact purpose was included.
+
+March 30, 2017
+Aleksei: Set up structure and formatting of the files, created basic interactions with VGA including resetting the screen and other core functionality.
