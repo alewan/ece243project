@@ -32,7 +32,7 @@
 .equ BAR2_START_X, 316
 .equ BAR1_START_Y, 114
 .equ BAR2_START_Y, 114
-.equ BAR_SIZE, 25
+.equ BAR_SIZE, 35
 .equ WHITE, 0xFFFF
 .equ GREY, 0x8410
 .equ BLACK, 0x0000
@@ -55,7 +55,7 @@
 .equ HEX_DISPLAY_VALA, 0b1110111
 
 #bytes
-beginning_message: .byte 0x50, 0x72, 0x65, 0x73, 0x73, 0x20, 0x4b, 0x45, 0x59, 0x30, 0x0d, 0x0a
+#beginning_message: .byte 0x50, 0x72, 0x65, 0x73, 0x73, 0x20, 0x4b, 0x45, 0x59, 0x30, 0x0d, 0x0a
 
 
 #TO SAVE IN THE ISR
@@ -154,14 +154,14 @@ mov r16, r0
 mov r17, r0
 
 #Draw first bar
-movui r4, WHITE
+movui r4, BLUE
 addi r5, r0, BAR1_START_X
 addi r6, r0, BAR1_START_Y
 call DRAW_BAR
 addi r18,r0,BAR1_START_Y
 
 #Draw second bar
-movui r4, WHITE
+movui r4, BLUE
 addi r5, r0, BAR2_START_X
 addi r6, r0, BAR2_START_Y
 call DRAW_BAR
@@ -181,6 +181,14 @@ call UPDATE_SCORE
 #END SETUP
 
 #ISR_SETUP
+	#Catch any previous interrupts and clear them
+	movia r8,TIMER1
+	stwio r0,(r8)
+	stwio r0,4(r8)
+	movia r8,KEYS
+	stwio r0,8(r8)
+	stwio r0,12(r8)
+	
 	#Enable interrups
 	movi r9, IRQ_SETUP
 	wrctl ienable, r9 #ienable = ctl3
@@ -193,10 +201,45 @@ call UPDATE_SCORE
 	stwio r9,8(r8)
 	stwio r0,12(r8)
 	#MESSGAE TO VGA BEFORE START OF GAME
+	#bytes
+#beginning_message: .byte 0x50, 0x72, 0x65, 0x73, 0x73, 0x20, 0x4b, 0x45, 0x59, 0x30, 0x0d, 0x0a
 	movia r8, VGA_CHAR_BASE
-	movi r9, beginning_message
-	stbio r9, 132(r8)
+	movi r7, 0x50
+	stbio r7, 291(r8)
+	movi r7, 0x72
+	stbio r7, 292(r8)
+	movi r7, 0x65
+	stbio r7, 293(r8)
+	movi r7, 0x73
+	stbio r7, 294(r8)
+	movi r7, 0x73
+	stbio r7, 295(r8)
+	movi r7, 0x20
+	stbio r7, 296(r8)
+	movi r7, 0x4b
+	stbio r7, 297(r8)
+	movi r7, 0x45
+	stbio r7, 298(r8)
+	movi r7, 0x59
+	stbio r7, 299(r8)
+	movi r7, 0x30
+	stbio r7, 300(r8)
+
+	
+	
 	WAIT_FOR_KEYPRESS: br WAIT_FOR_KEYPRESS
+		movia r8, VGA_CHAR_BASE
+	movi r7, 0x20
+	stbio r7, 291(r8)
+	stbio r7, 292(r8)
+	stbio r7, 293(r8)
+	stbio r7, 294(r8)
+	stbio r7, 295(r8)
+	stbio r7, 296(r8)
+	stbio r7, 297(r8)
+	stbio r7, 298(r8)
+	stbio r7, 299(r8)
+	stbio r7, 300(r8)
 
 
 	#Initialize counter value
@@ -261,7 +304,8 @@ br gameLoop
 
 #add to r19
 addr19:
-movi r12, 190
+movi r12, YMAX
+subi r12, r12, BAR_SIZE
 bgt r19, r12, retFromFSR
 addi r19, r19, 5
 br retFromFSR
