@@ -1,5 +1,5 @@
 //have to do small tests to test this
-int threshold = 100;
+int threshold = 500;
 int outPin = 7;
 
 void setup() {
@@ -10,8 +10,16 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(analogRead(0) > threshold)
-    digitalWrite(outPin, HIGH);
-  else
+  if(analogRead(0) > threshold) {
     digitalWrite(outPin, LOW);
+    Serial.println("OFF");
+  }
+  else  {
+    digitalWrite(outPin, HIGH);
+    Serial.println("ON");
+  }
+
+  Serial.println(analogRead(5));
+
+  //Serial.println(analogRead(0));
 }
